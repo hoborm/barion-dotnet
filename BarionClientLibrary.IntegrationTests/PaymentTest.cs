@@ -1,7 +1,6 @@
 ﻿using BarionClientLibrary.Operations.Common;
 using BarionClientLibrary.Operations.PaymentState;
 using BarionClientLibrary.Operations.StartPayment;
-using BarionClientTester;
 using System;
 using Xunit;
 
@@ -48,7 +47,7 @@ namespace BarionClientLibrary.IntegrationTests
 
             var refundResult = Operations.Refund(barionClient, paymentResult);
 
-            Assert.Equal(1, refundResult.RefundedTransactions.Length);
+            Assert.Single(refundResult.RefundedTransactions);
             Assert.Equal("Succeeded", refundResult.RefundedTransactions[0].Status);
 
             GetPaymentStateOperationResult afterRefundState = Operations.GetPaymentState(barionClient, paymentResult);

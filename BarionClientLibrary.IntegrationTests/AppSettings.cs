@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Configuration;
 
-namespace BarionClientTester
+namespace BarionClientLibrary.IntegrationTests
 {
     public static class AppSettings
     {

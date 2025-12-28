@@ -1,5 +1,4 @@
 ﻿using BarionClientLibrary.Operations.StartPayment;
-using BarionClientTester;
 using NReco.PhantomJS;
 using System;
 using System.IO;
@@ -19,13 +18,11 @@ namespace BarionClientLibrary.IntegrationTests
                     throw new Exception($"Payment script failed: {e.Data}");
             };
 
-            using (var fileStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BarionClientLibrary.IntegrationTests.PaymentScript.js"))
-            using (var streamReader = new StreamReader(fileStream))
-            {
+            using var fileStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BarionClientLibrary.IntegrationTests.PaymentScript.js");
+            using var streamReader = new StreamReader(fileStream);
                 var paymentScript = streamReader.ReadToEnd();
 
-                phantomJS.RunScript(paymentScript, new[] { result.GatewayUrl, AppSettings.BarionPayer, AppSettings.BarionPayerPassword });
-            }
+            phantomJS.RunScript(paymentScript, [result.GatewayUrl, AppSettings.BarionPayer, AppSettings.BarionPayerPassword]);
         }
     }
 }
