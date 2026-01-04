@@ -1,4 +1,5 @@
-﻿using BarionClientLibrary.Operations;
+﻿using BarionClientLibrary.Helpers;
+using BarionClientLibrary.Operations;
 using BarionClientLibrary.Operations.Common;
 using BarionClientLibrary.RetryPolicies;
 using Newtonsoft.Json;
@@ -6,13 +7,11 @@ using Newtonsoft.Json.Converters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reflection;
-using BarionClientLibrary.Helpers;
 
 namespace BarionClientLibrary
 {
@@ -45,12 +44,8 @@ namespace BarionClientLibrary
             if (httpClient == null)
                 throw new ArgumentNullException(nameof(httpClient));
 
-#if NET45
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-#endif
-
             _httpClient = httpClient;
-            
+
             if (settings == null)
                 throw new ArgumentNullException(nameof(settings));
 
@@ -273,7 +268,7 @@ namespace BarionClientLibrary
         {
             var result = Activator.CreateInstance(resultType) as BarionOperationResult;
             result.IsOperationSuccessful = false;
-            result.Errors = new[] 
+            result.Errors = new[]
             {
                 new Error
                 {
