@@ -5,7 +5,7 @@
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>BarionClientSignKey.snk</AssemblyOriginatorKeyFile>
     <PublicSign>true</PublicSign>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile> <!-- This generates some compiler warnings because of undocumented public members -->
     <NeutralLanguage>en</NeutralLanguage>
     <PackageId>BarionClient</PackageId>
     <Version>1.1.0</Version>
@@ -20,5 +20,6 @@
   
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.1" />
   </ItemGroup>
 </Project>

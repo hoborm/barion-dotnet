@@ -1,92 +1,90 @@
-﻿using BarionClientLibrary.Operations.Common;
-using BarionClientLibrary.Operations.PaymentState;
+﻿using System;
+using BarionClientLibrary.Operations.Enums;
 using BarionClientLibrary.Operations.StartPayment;
-using System;
 using Xunit;
 
-namespace BarionClientLibrary.IntegrationTests
+namespace BarionClientLibrary.IntegrationTests;
+
+public class PaymentTests
 {
-    public class PaymentTests
+    private readonly BarionSettings _settings;
+
+    public PaymentTests()
     {
-        private readonly BarionSettings _settings;
-
-        public PaymentTests()
+        _settings = new BarionSettings
         {
-            _settings = new BarionSettings
-            {
-                BaseUrl = new Uri(AppSettings.BarionBaseAddress),
-                POSKey = Guid.Parse(AppSettings.BarionPOSKey),
-                Payee = AppSettings.BarionPayee
-            };
-        }
+            BaseUrl = new Uri(AppSettings.BarionBaseAddress),
+            POSKey = Guid.Parse(AppSettings.BarionPOSKey),
+            Payee = AppSettings.BarionPayee
+        };
+    }
 
-        [Fact]
-        public void ImmediatePayment()
-        {
-            var barionClient = new BarionClient(_settings);
+    [Fact]
+    public void ImmediatePayment()
+    {
+        var barionClient = new BarionClient(_settings);
 
-            var paymentResult = Operations.StartPayment(barionClient, _settings, PaymentType.Immediate);
+        var paymentResult = Operations.StartPayment(barionClient, _settings, PaymentType.Immediate);
 
-            BrowserScriptRunner.RunPaymentScript(paymentResult);
+        BrowserScriptRunner.RunPaymentScript(paymentResult);
 
-            GetPaymentStateOperationResult statusresult = Operations.GetPaymentState(barionClient, paymentResult);
+        var statusresult = Operations.GetPaymentState(barionClient, paymentResult);
 
-            Assert.Equal(PaymentStatus.Succeeded, statusresult.Status);
-        }
+        Assert.Equal(PaymentStatus.Succeeded, statusresult.Status);
+    }
 
-        [Fact]
-        public void Refund()
-        {
-            var barionClient = new BarionClient(_settings);
+    [Fact]
+    public void Refund()
+    {
+        var barionClient = new BarionClient(_settings);
 
-            var paymentResult = Operations.StartPayment(barionClient, _settings, PaymentType.Immediate);
+        var paymentResult = Operations.StartPayment(barionClient, _settings, PaymentType.Immediate);
 
-            BrowserScriptRunner.RunPaymentScript(paymentResult);
+        BrowserScriptRunner.RunPaymentScript(paymentResult);
 
-            GetPaymentStateOperationResult beforeRefundState = Operations.GetPaymentState(barionClient, paymentResult);
+        var beforeRefundState = Operations.GetPaymentState(barionClient, paymentResult);
 
-            var refundResult = Operations.Refund(barionClient, paymentResult);
+        var refundResult = Operations.Refund(barionClient, paymentResult);
 
-            Assert.Single(refundResult.RefundedTransactions);
-            Assert.Equal("Succeeded", refundResult.RefundedTransactions[0].Status);
+        _ = Assert.Single(refundResult.RefundedTransactions);
+        Assert.Equal("Succeeded", refundResult.RefundedTransactions[0].Status);
 
-            GetPaymentStateOperationResult afterRefundState = Operations.GetPaymentState(barionClient, paymentResult);
+        var afterRefundState = Operations.GetPaymentState(barionClient, paymentResult);
 
-            Assert.Equal(beforeRefundState.Total - refundResult.RefundedTransactions[0].Total, afterRefundState.Total);
-        }
+        Assert.Equal(beforeRefundState.Total - refundResult.RefundedTransactions[0].Total, afterRefundState.Total);
+    }
 
-        [Fact]
-        public void ReserveThenFinishReservation()
-        {
-            var barionClient = new BarionClient(_settings);
+    [Fact]
+    public void ReserveThenFinishReservation()
+    {
+        var barionClient = new BarionClient(_settings);
 
-            var paymentResult = Operations.StartPayment(barionClient, _settings, PaymentType.Reservation, TimeSpan.FromDays(1));
+        var paymentResult = Operations.StartPayment(barionClient, _settings, PaymentType.Reservation, TimeSpan.FromDays(1));
 
-            BrowserScriptRunner.RunPaymentScript(paymentResult);
+        BrowserScriptRunner.RunPaymentScript(paymentResult);
 
-            GetPaymentStateOperationResult beforeFinishReservationState = Operations.GetPaymentState(barionClient, paymentResult);
+        var beforeFinishReservationState = Operations.GetPaymentState(barionClient, paymentResult);
 
-            Assert.Equal(PaymentStatus.Reserved, beforeFinishReservationState.Status);
+        Assert.Equal(PaymentStatus.Reserved, beforeFinishReservationState.Status);
 
-            var finishReservationResult = Operations.FinishReservation(barionClient, beforeFinishReservationState);
-            
-            Assert.Equal(PaymentStatus.Succeeded, finishReservationResult.Status);
-        }
+        var finishReservationResult = Operations.FinishReservation(barionClient, beforeFinishReservationState);
 
-        [Fact]
-        public void Recurring()
-        {
-            var barionClient = new BarionClient(_settings);
+        Assert.Equal(PaymentStatus.Succeeded, finishReservationResult.Status);
+    }
 
-            var paymentResult = Operations.StartPayment(barionClient, _settings, PaymentType.Immediate, initiateRecurrence: true, recurrenceId: "R");
+    [Fact]
+    public void Recurring()
+    {
+        var barionClient = new BarionClient(_settings);
 
-            BrowserScriptRunner.RunPaymentScript(paymentResult);
+        var paymentResult = Operations.StartPayment(barionClient, _settings, PaymentType.Immediate, initiateRecurrence: true, recurrenceId: "R");
 
-            Assert.Equal(RecurrenceResult.Successful, paymentResult.RecurrenceResult);
+        BrowserScriptRunner.RunPaymentScript(paymentResult);
 
-            var paymentResult2 = Operations.StartPayment(barionClient, _settings, PaymentType.Immediate, initiateRecurrence: false, recurrenceId: "R");
+        Assert.Equal(RecurrenceResult.Successful, paymentResult.RecurrenceResult);
 
-            Assert.Equal(PaymentStatus.Succeeded, paymentResult2.Status);
-        }
+        var paymentResult2 = Operations.StartPayment(barionClient, _settings, PaymentType.Immediate, initiateRecurrence: false, recurrenceId: "R");
+
+        Assert.Equal(PaymentStatus.Succeeded, paymentResult2.Status);
     }
 }
