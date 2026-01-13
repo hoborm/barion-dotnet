@@ -1,28 +1,28 @@
-﻿using BarionClientLibrary.Operations.StartPayment;
-using NReco.PhantomJS;
-using System;
-using System.IO;
+﻿using System.IO;
 using System.Reflection;
+using BarionClientLibrary.Operations.StartPayment;
+using NReco.PhantomJS;
 
-namespace BarionClientLibrary.IntegrationTests
+namespace BarionClientLibrary.IntegrationTests;
+
+internal sealed class BrowserScriptRunner
 {
-    class BrowserScriptRunner
+    public static void RunPaymentScript(StartPaymentOperationResult result)
     {
-        public static void RunPaymentScript(StartPaymentOperationResult result)
+        var phantomJS = new PhantomJS();
+
+        phantomJS.OutputReceived += (sender, e) =>
         {
-            var phantomJS = new PhantomJS();
-
-            phantomJS.OutputReceived += (sender, e) =>
+            if (e.Data != null)
             {
-                if (e.Data != null)
-                    throw new Exception($"Payment script failed: {e.Data}");
-            };
+                throw new System.Exception($"Payment script failed: {e.Data}");
+            }
+        };
 
-            using var fileStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BarionClientLibrary.IntegrationTests.PaymentScript.js");
-            using var streamReader = new StreamReader(fileStream);
-                var paymentScript = streamReader.ReadToEnd();
+        using var fileStream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BarionClientLibrary.IntegrationTests.PaymentScript.js");
+        using var streamReader = new StreamReader(fileStream);
+        var paymentScript = streamReader.ReadToEnd();
 
-            phantomJS.RunScript(paymentScript, [result.GatewayUrl, AppSettings.BarionPayer, AppSettings.BarionPayerPassword]);
-        }
+        phantomJS.RunScript(paymentScript, [result.GatewayUrl, AppSettings.BarionPayer, AppSettings.BarionPayerPassword]);
     }
 }

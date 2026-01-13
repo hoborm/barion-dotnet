@@ -1,128 +1,124 @@
-﻿using BarionClientLibrary;
+﻿using System;
+using System.Globalization;
+using BarionClientLibrary;
 using BarionClientLibrary.Operations.Common;
+using BarionClientLibrary.Operations.Enums;
 using BarionClientLibrary.Operations.PaymentState;
 using BarionClientLibrary.Operations.Refund;
 using BarionClientLibrary.Operations.StartPayment;
 using BarionClientLibrary.RetryPolicies;
-using System;
-using System.Globalization;
 
-namespace BarionClientTester
+namespace BarionClientTester;
+
+public class Refund
 {
-    public class Refund
+    public static void Run()
     {
-        public static void Run()
+        var settings = new BarionSettings
         {
-            var settings = new BarionSettings
+            BaseUrl = new Uri(AppSettings.BarionBaseAddress),
+            POSKey = Guid.Parse(AppSettings.BarionPOSKey),
+            Payee = AppSettings.BarionPayee
+        };
+
+        using (var barionClient = new BarionClient(settings))
+        {
+            barionClient.RetryPolicy = new NoRetry();
+            var startPaymentOperation = new StartPaymentOperation
             {
-                BaseUrl = new Uri(AppSettings.BarionBaseAddress),
-                POSKey = Guid.Parse(AppSettings.BarionPOSKey),
-                Payee = AppSettings.BarionPayee
+                GuestCheckOut = true,
+                PaymentType = PaymentType.Immediate,
+                FundingSources = new[] { FundingSourceType.All },
+                PaymentRequestId = "P1",
+                OrderNumber = "1_0",
+                Currency = Currency.HUF,
+                CallbackUrl = "http://index.hu",
+                Locale = CultureInfo.CurrentCulture,
+                RedirectUrl = "http://index.hu"
             };
 
-            using (var barionClient = new BarionClient(settings))
+            var transaction = new PaymentTransaction
             {
-                barionClient.RetryPolicy = new NoRetry();
-                var startPaymentOperation = new StartPaymentOperation
-                {
-                    GuestCheckOut = true,
-                    PaymentType = PaymentType.Immediate,
-                    FundingSources = new[] { FundingSourceType.All },
-                    PaymentRequestId = "P1",
-                    OrderNumber = "1_0",
-                    Currency = Currency.HUF,
-                    CallbackUrl = "http://index.hu",
-                    Locale = CultureInfo.CurrentCulture,
-                    RedirectUrl = "http://index.hu"
-                };
+                Payee = settings.Payee,
+                POSTransactionId = "T1",
+                Total = new decimal(1000),
+                Comment = "comment"
+            };
 
-                var transaction = new PaymentTransaction
-                {
-                    Payee = settings.Payee,
-                    POSTransactionId = "T1",
-                    Total = new decimal(1000),
-                    Comment = "comment"
-                };
+            var item = new Item
+            {
+                Name = "Test",
+                Description = "Test",
+                ItemTotal = new decimal(1000),
+                Quantity = 1,
+                Unit = "piece",
+                UnitPrice = new decimal(1000),
+                SKU = "SKU"
+            };
 
-                var item = new Item
-                {
-                    Name = "Test",
-                    Description = "Test",
-                    ItemTotal = new decimal(1000),
-                    Quantity = 1,
-                    Unit = "piece",
-                    UnitPrice = new decimal(1000),
-                    SKU = "SKU"
-                };
+            transaction.Items = new[] { item };
+            startPaymentOperation.Transactions = new[] { transaction };
 
-                transaction.Items = new[] { item };
-                startPaymentOperation.Transactions = new[] { transaction };
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("Sending StartPayment...");
+            var result = barionClient.ExecuteAsync<StartPaymentOperationResult>(startPaymentOperation).Result;
+            Console.ResetColor();
+            Console.WriteLine("StartPayment result:");
+            Console.ForegroundColor = result.IsOperationSuccessful ? ConsoleColor.Green : ConsoleColor.Red;
+            Console.WriteLine($"\tSuccess: {result.IsOperationSuccessful}");
+            Console.WriteLine($"\tPaymentId: {result.PaymentId}");
+            Console.WriteLine($"\tStatus: {result.Status}");
 
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Sending StartPayment...");
-                var result = barionClient.ExecuteAsync<StartPaymentOperationResult>(startPaymentOperation).Result;
-                Console.ResetColor();
-                Console.WriteLine("StartPayment result:");
-                if (result.IsOperationSuccessful)
-                    Console.ForegroundColor = ConsoleColor.Green;
-                else
-                    Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\tSuccess: {result.IsOperationSuccessful}");
-                Console.WriteLine($"\tPaymentId: {result.PaymentId}");
-                Console.WriteLine($"\tStatus: {result.Status}");
+            Console.ResetColor();
+            Console.WriteLine();
+            Console.WriteLine("Starting the browser with the barion pay page.");
 
-                Console.ResetColor();
-                Console.WriteLine();
-                Console.WriteLine("Starting the browser with the barion pay page.");
+            _ = System.Diagnostics.Process.Start(result.GatewayUrl);
 
-                System.Diagnostics.Process.Start(result.GatewayUrl);
+            Console.WriteLine("Press any key to continue the flow...");
+            _ = Console.ReadKey();
 
-                Console.WriteLine("Press any key to continue the flow...");
-                Console.ReadKey();
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("Sending GetPaymentState...");
 
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Sending GetPaymentState...");
+            var statusOperation = new GetPaymentStateOperation
+            {
+                PaymentId = result.PaymentId
+            };
 
-                var statusOperation = new GetPaymentStateOperation();
-                statusOperation.PaymentId = result.PaymentId;
+            var result2 = barionClient.ExecuteAsync<GetPaymentStateOperationResult>(statusOperation).Result;
 
-                var result2 = barionClient.ExecuteAsync<GetPaymentStateOperationResult>(statusOperation).Result;
+            Console.ResetColor();
+            Console.WriteLine("GetPaymentState result:");
+            Console.ForegroundColor = result.IsOperationSuccessful ? ConsoleColor.Green : ConsoleColor.Red;
+            Console.WriteLine($"\tSuccess: {result2.IsOperationSuccessful}");
+            Console.WriteLine($"\tPaymentId: {result2.PaymentId}");
+            Console.WriteLine($"\tStatus: {result2.Status}");
 
-                Console.ResetColor();
-                Console.WriteLine("GetPaymentState result:");
-                if (result.IsOperationSuccessful)
-                    Console.ForegroundColor = ConsoleColor.Green;
-                else
-                    Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\tSuccess: {result2.IsOperationSuccessful}");
-                Console.WriteLine($"\tPaymentId: {result2.PaymentId}");
-                Console.WriteLine($"\tStatus: {result2.Status}");
+            var refundOpertation = new RefundOperation
+            {
+                PaymentId = result.PaymentId
+            };
 
-                var refundOpertation = new RefundOperation();
+            var transactionToRefund = new TransactionToRefund
+            {
+                TransactionId = result.Transactions[0].TransactionId,
+                AmountToRefund = new decimal(50)
+            };
+            refundOpertation.TransactionsToRefund = new[] { transactionToRefund };
 
-                refundOpertation.PaymentId = result.PaymentId;
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("Sending Refund...");
 
-                var transactionToRefund = new TransactionToRefund();
-                transactionToRefund.TransactionId = result.Transactions[0].TransactionId;
-                transactionToRefund.AmountToRefund = new decimal(50);
-                refundOpertation.TransactionsToRefund = new[] { transactionToRefund };
+            var result3 = barionClient.ExecuteAsync<RefundOperationResult>(refundOpertation).Result;
 
-                Console.WriteLine();
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Sending Refund...");
-
-                var result3 = barionClient.ExecuteAsync<RefundOperationResult>(refundOpertation).Result;
-
-                Console.ResetColor();
-                Console.WriteLine("Refund result:");
-                if (result3.IsOperationSuccessful)
-                    Console.ForegroundColor = ConsoleColor.Green;
-                else
-                    Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"\tSuccess: {result3.IsOperationSuccessful}");
-                Console.WriteLine($"\tPaymentId: {result3.PaymentId}");
-            }
+            Console.ResetColor();
+            Console.WriteLine("Refund result:");
+            Console.ForegroundColor = result3.IsOperationSuccessful ? ConsoleColor.Green : ConsoleColor.Red;
+            Console.WriteLine($"\tSuccess: {result3.IsOperationSuccessful}");
+            Console.WriteLine($"\tPaymentId: {result3.PaymentId}");
         }
     }
 }
